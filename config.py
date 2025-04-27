@@ -16,6 +16,10 @@ MORPHOLOGY_CONFIG = {
     'owner_info': {
         'close_kernel_size': (30, 3),
         'open_kernel_size': (11, 11)
+    },
+    'series_number': {
+        'close_kernel_size': (5, 70),
+        'open_kernel_size': (11, 11)
     }
 }
 
@@ -24,5 +28,9 @@ CONTOUR_FILTER_CONFIG = {
     'owner_info': {
         'x_min_ratio': 0.35,
         'x_max_ratio': 0.9
+    },
+    'series_number': {
+        'x_min_ratio': 0.9,
+        'min_height_width_ratio': 5.0
     }
 } 
