@@ -32,7 +32,7 @@ class ContourProcessor:
         
         Args:
             binary_image: Бинарное изображение
-            operation_type: Тип операции ('owner_info', 'series_number')
+            operation_type: Тип операции ('owner_info', 'series_number', 'photo')
             
         Returns:
             List[np.ndarray]: Список контуров
@@ -81,6 +81,14 @@ class ContourProcessor:
             elif operation_type == 'series_number':
                 if (x >= image_width * config['x_min_ratio'] and 
                     h / w >= config['min_height_width_ratio']):
+                    filtered_contours.append(contour)
+                    
+            elif operation_type == 'photo':
+                if (config['height_min_ratio'] * image_height <= h <= 
+                    config['height_max_ratio'] * image_height and
+                    cv2.contourArea(contour) / (image_width * image_height) > 
+                    config['min_area_ratio'] and
+                    x <= image_width * config['x_max_ratio']):
                     filtered_contours.append(contour)
         
         return filtered_contours
@@ -188,6 +196,36 @@ class ContourProcessor:
         
         return fields, visualization
 
+    def process_photo_contours(self, contours: List[np.ndarray]) -> Tuple[List[Dict], 
+                                                                         List[Dict]]:
+        """
+        Обработка контуров области фотографии
+        
+        Args:
+            contours: Список контуров
+            
+        Returns:
+            Tuple[List[Dict], List[Dict]]: (поля фотографии, визуализация)
+        """
+        fields = []
+        visualization = []
+        
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            
+            fields.append({
+                "type": "photo",
+                "bbox": [x, y, w, h],
+            })
+            
+            visualization.append({
+                "bbox": (x, y, w, h),
+                "type": "photo",
+                "color": (255, 0, 0)
+            })
+        
+        return fields, visualization
+
     def process_birth_place_data(self, birth_place_parts: List[Dict]) -> Optional[Dict]:
         """
         Обработка и объединение данных о месте рождения
@@ -242,8 +280,7 @@ class ContourProcessor:
         return result_image
 
     def process_contours(self, image: np.ndarray, binary: np.ndarray, 
-                        padding: int = 5) -> Tuple[np.ndarray, 
-                                                  Dict[str, Any]]:
+                        padding: int = 5) -> Tuple[np.ndarray, Dict[str, Any]]:
         """
         Обработка контуров и их фильтрация
         
@@ -259,43 +296,44 @@ class ContourProcessor:
         image_width = image.shape[1]
         image_height = image.shape[0]
         
-        # Получаем контуры для разных областей
+        # Обработка контуров области информации о владельце
         owner_info_contours = self.apply_morphological_operations(binary, 'owner_info')
-        filtered_owner_info = self.filter_contours(owner_info_contours, 'owner_info', 
+        owner_info_contours = self.filter_contours(owner_info_contours, 'owner_info', 
                                                  image_width, image_height)
+        owner_info_fields, birth_place_parts, owner_info_visualization = \
+            self.process_owner_information_contours(owner_info_contours, image_width, 
+                                                 image_height, binary, padding)
         
+        # Обработка контуров области серии и номера паспорта
         series_number_contours = self.apply_morphological_operations(binary, 'series_number')
-        filtered_series_number = self.filter_contours(series_number_contours, 'series_number', 
-                                                    image_width, image_height)
+        series_number_contours = self.filter_contours(series_number_contours, 'series_number', 
+                                                   image_width, image_height)
+        series_number_fields, series_number_visualization = \
+            self.process_passport_number_contours(series_number_contours, binary, padding)
         
-        # Обработка каждой области
-        owner_fields, birth_place_parts, owner_viz = self.process_owner_information_contours(
-            filtered_owner_info, image_width, image_height, binary, padding
-        )
+        # Обработка контуров области фотографии
+        photo_contours = self.apply_morphological_operations(binary, 'photo')
+        photo_contours = self.filter_contours(photo_contours, 'photo', 
+                                           image_width, image_height)
+        photo_fields, photo_visualization = self.process_photo_contours(photo_contours)
         
-        number_fields, number_viz = self.process_passport_number_contours(
-            filtered_series_number, binary, padding
-        )
+        # Обработка данных о месте рождения
+        birth_place_field = self.process_birth_place_data(birth_place_parts)
+        if birth_place_field:
+            owner_info_fields.append(birth_place_field)
         
-        # Объединение визуализации
-        all_visualization = owner_viz + number_viz
+        # Объединение всех полей
+        all_fields = owner_info_fields + series_number_fields + photo_fields
         
-        # Создание результирующего изображения
+        # Объединение всех данных для визуализации
+        all_visualization = owner_info_visualization + series_number_visualization + photo_visualization
+        
+        # Отрисовка визуализации
         result_image = self.draw_visualization(image, all_visualization)
         
-        # Обработка места рождения
-        birth_place_field = self.process_birth_place_data(birth_place_parts)
-        
-        # Формирование итоговой структуры данных
+        # Формирование структуры данных для JSON
         passport_data = {
-            "image_info": {
-                "width": image_width,
-                "height": image_height
-            },
-            "fields": owner_fields + number_fields
+            "fields": all_fields
         }
-        
-        if birth_place_field:
-            passport_data["fields"].append(birth_place_field)
         
         return result_image, passport_data 

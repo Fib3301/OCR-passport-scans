@@ -36,6 +36,9 @@ def process_directory(input_dir: str, output_dir: str, config: dict = None) -> N
         print(f"Изображения не найдены в директории {input_dir}")
         return
     
+    # Путь к директории с идеальными данными
+    ground_truth_dir = Path("correct_passport_data")
+    
     contour_processor = ContourProcessor(config)
     
     # Обработка каждого изображения
@@ -54,10 +57,14 @@ def process_directory(input_dir: str, output_dir: str, config: dict = None) -> N
             # Обработка изображения
             binary = process_image(image_path, config)
             
+            # Путь к идеальным данным для текущего изображения
+            ground_truth_path = ground_truth_dir / f"{image_path.stem}_passport.json"
+            
             # Обработка контуров и рисование результатов
             result_image, passport_data = contour_processor.process_contours(
                 image, 
-                binary
+                binary, 
+                ground_truth_path=ground_truth_path if ground_truth_path.exists() else None
             )
 
             # Сохранение результата
@@ -68,8 +75,6 @@ def process_directory(input_dir: str, output_dir: str, config: dict = None) -> N
             json_file = output_path / f"{image_path.stem}_passport.json"
             with open(json_file, 'w', encoding='utf-8') as f:
                 json.dump(passport_data, f, ensure_ascii=False, indent=2)
-            
-            print(f"Результаты сохранены в {output_path}")
             
         except Exception as e:
             print(f"Ошибка при обработке {image_path.name}: {str(e)}")

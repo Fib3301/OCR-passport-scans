@@ -20,6 +20,10 @@ MORPHOLOGY_CONFIG = {
     'series_number': {
         'close_kernel_size': (5, 70),
         'open_kernel_size': (11, 11)
+    },
+    'photo': {
+        'close_kernel_size': (5, 50),
+        'open_kernel_size': (15, 15)
     }
 }
 
@@ -32,5 +36,11 @@ CONTOUR_FILTER_CONFIG = {
     'series_number': {
         'x_min_ratio': 0.9,
         'min_height_width_ratio': 5.0
+    },
+    'photo': {
+        'height_min_ratio': 0.2,
+        'height_max_ratio': 0.9,
+        'min_area_ratio': 0.05,
+        'x_max_ratio': 0.25
     }
 } 
