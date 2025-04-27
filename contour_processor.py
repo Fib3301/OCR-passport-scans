@@ -96,7 +96,7 @@ class ContourProcessor:
     def process_owner_information_contours(self, contours: List[np.ndarray], 
                                          image_width: int, image_height: int, 
                                          binary: np.ndarray, 
-                                         padding: int = 5) -> Tuple[List[Dict], 
+                                         padding: int = 6) -> Tuple[List[Dict], 
                                                                   List[Dict], 
                                                                   List[Dict]]:
         """
@@ -280,7 +280,9 @@ class ContourProcessor:
         return result_image
 
     def process_contours(self, image: np.ndarray, binary: np.ndarray, 
-                        padding: int = 5) -> Tuple[np.ndarray, Dict[str, Any]]:
+                        padding: int = 5, 
+                        ground_truth_path: Optional[Path] = None) -> Tuple[np.ndarray, 
+                                                                         Dict[str, Any]]:
         """
         Обработка контуров и их фильтрация
         
@@ -288,6 +290,7 @@ class ContourProcessor:
             image: Исходное изображение
             binary: Бинарное изображение
             padding: Отступ для рисования прямоугольников
+            ground_truth_path: Путь к JSON с идеальными прямоугольниками
             
         Returns:
             Tuple[np.ndarray, Dict[str, Any]]: 
@@ -296,44 +299,49 @@ class ContourProcessor:
         image_width = image.shape[1]
         image_height = image.shape[0]
         
-        # Обработка контуров области информации о владельце
+        # Получаем контуры для разных областей
         owner_info_contours = self.apply_morphological_operations(binary, 'owner_info')
-        owner_info_contours = self.filter_contours(owner_info_contours, 'owner_info', 
+        filtered_owner_info = self.filter_contours(owner_info_contours, 'owner_info', 
                                                  image_width, image_height)
-        owner_info_fields, birth_place_parts, owner_info_visualization = \
-            self.process_owner_information_contours(owner_info_contours, image_width, 
-                                                 image_height, binary, padding)
         
-        # Обработка контуров области серии и номера паспорта
         series_number_contours = self.apply_morphological_operations(binary, 'series_number')
-        series_number_contours = self.filter_contours(series_number_contours, 'series_number', 
-                                                   image_width, image_height)
-        series_number_fields, series_number_visualization = \
-            self.process_passport_number_contours(series_number_contours, binary, padding)
+        filtered_series_number = self.filter_contours(series_number_contours, 'series_number', 
+                                                    image_width, image_height)
         
-        # Обработка контуров области фотографии
         photo_contours = self.apply_morphological_operations(binary, 'photo')
-        photo_contours = self.filter_contours(photo_contours, 'photo', 
-                                           image_width, image_height)
-        photo_fields, photo_visualization = self.process_photo_contours(photo_contours)
+        filtered_photo = self.filter_contours(photo_contours, 'photo', 
+                                            image_width, image_height)
         
-        # Обработка данных о месте рождения
-        birth_place_field = self.process_birth_place_data(birth_place_parts)
-        if birth_place_field:
-            owner_info_fields.append(birth_place_field)
+        # Обработка каждой области
+        owner_fields, birth_place_parts, owner_viz = self.process_owner_information_contours(
+            filtered_owner_info, image_width, image_height, binary, padding
+        )
         
-        # Объединение всех полей
-        all_fields = owner_info_fields + series_number_fields + photo_fields
+        number_fields, number_viz = self.process_passport_number_contours(
+            filtered_series_number, binary, padding
+        )
         
-        # Объединение всех данных для визуализации
-        all_visualization = owner_info_visualization + series_number_visualization + photo_visualization
+        photo_fields, photo_viz = self.process_photo_contours(filtered_photo)
         
-        # Отрисовка визуализации
+        # Объединение визуализации
+        all_visualization = owner_viz + number_viz + photo_viz
+        
+        # Создание результирующего изображения
         result_image = self.draw_visualization(image, all_visualization)
         
-        # Формирование структуры данных для JSON
+        # Обработка места рождения
+        birth_place_field = self.process_birth_place_data(birth_place_parts)
+        
+        # Формирование итоговой структуры данных
         passport_data = {
-            "fields": all_fields
+            "image_info": {
+                "width": image_width,
+                "height": image_height
+            },
+            "fields": owner_fields + number_fields + photo_fields
         }
+        
+        if birth_place_field:
+            passport_data["fields"].append(birth_place_field)
         
         return result_image, passport_data 

@@ -5,7 +5,8 @@
 import argparse
 from pathlib import Path
 import numpy as np
-from utils import resize_image, process_image
+from utils import load_ground_truth, resize_image, process_image
+from metrics import evaluate_ocr_quality, calculate_average_metrics
 from contour_processor import ContourProcessor
 import cv2
 import json
@@ -38,6 +39,9 @@ def process_directory(input_dir: str, output_dir: str, config: dict = None) -> N
     
     # Путь к директории с идеальными данными
     ground_truth_dir = Path("correct_passport_data")
+    
+    # Список для хранения метрик всех изображений
+    all_metrics = []
     
     contour_processor = ContourProcessor(config)
     
@@ -76,9 +80,40 @@ def process_directory(input_dir: str, output_dir: str, config: dict = None) -> N
             with open(json_file, 'w', encoding='utf-8') as f:
                 json.dump(passport_data, f, ensure_ascii=False, indent=2)
             
+            # Если есть идеальные данные, вычисляем метрики
+            if ground_truth_path.exists():
+                ground_truth_data = load_ground_truth(ground_truth_path)
+                if ground_truth_data:
+                    # Вычисляем метрики для всех полей
+                    metrics = evaluate_ocr_quality(passport_data, ground_truth_data)
+                    all_metrics.append(metrics)
+                    
+                    # Выводим метрики для текущего изображения
+                    print("\nМетрики для текущего изображения:")
+                    for field_type, field_metrics in metrics.items():
+                        print(f"  {field_type}:")
+                        print(f"    IoU: {field_metrics['iou']:.4f}")
+                        print(f"    Character Accuracy: {field_metrics['char_accuracy']:.4f}")
+            
         except Exception as e:
             print(f"Ошибка при обработке {image_path.name}: {str(e)}")
             continue
+    
+    # Вычисляем средние метрики по всему датасету
+    if all_metrics:
+        avg_metrics = calculate_average_metrics(all_metrics)
+        
+        print("\n" + "="*50)
+        print("СРЕДНИЕ МЕТРИКИ ПО ВСЕМУ ДАТАСЕТУ:")
+        print("="*50)
+        
+        for field_type, field_metrics in avg_metrics.items():
+            print(f"  {field_type}:")
+            print(f"    IoU: {field_metrics['iou']:.4f}")
+            print(f"    Character Accuracy: {field_metrics['char_accuracy']:.4f}")
+        print("="*50)
+    else:
+        print("\nНе удалось вычислить средние метрики, так как нет данных для сравнения.")
 
 def main():
     parser = argparse.ArgumentParser(description='Обработка изображений паспортов')

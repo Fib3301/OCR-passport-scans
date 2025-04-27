@@ -1,0 +1,99 @@
+{
+  "image_info": {
+    "width": 800,
+    "height": 563
+  },
+  "fields": [
+    {
+      "type": "surname",
+      "value": "СЕРГЕЕВИЧ",
+      "bbox": [
+        415,
+        62,
+        152,
+        28
+      ]
+    },
+    {
+      "type": "name",
+      "value": "СНЕКНОММА",
+      "bbox": [
+        425,
+        148,
+        167,
+        28
+      ]
+    },
+    {
+      "type": "patronymic",
+      "value": "OLGA",
+      "bbox": [
+        399,
+        190,
+        73,
+        28
+      ]
+    },
+    {
+      "type": "birth_date",
+      "value": "06.06.1990",
+      "bbox": [
+        485,
+        234,
+        153,
+        27
+      ]
+    },
+    {
+      "type": "gender",
+      "value": "ЖЕН",
+      "bbox": [
+        304,
+        234,
+        61,
+        29
+      ]
+    },
+    {
+      "type": "passport_number",
+      "value": "4217043863",
+      "bbox": [
+        746,
+        157,
+        30,
+        228
+      ]
+    },
+    {
+      "type": "photo",
+      "bbox": [
+        47,
+        98,
+        210,
+        237
+      ]
+    },
+    {
+      "type": "birth_place",
+      "value": "ПЕРМЬ",
+      "bbox": [
+        404,
+        276,
+        89,
+        28
+      ],
+      "parts": [
+        {
+          "value": "ПЕРМЬ",
+          "bbox": [
+            404,
+            276,
+            89,
+            28
+          ],
+          "y_position": 276
+        }
+      ]
+    }
+  ]
+}

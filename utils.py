@@ -53,6 +53,22 @@ def save_results(output_path: Path, image_name: str, result_image: np.ndarray,
     with open(json_file, 'w', encoding='utf-8') as f:
         json.dump(passport_data, f, ensure_ascii=False, indent=2)
 
+def load_ground_truth(ground_truth_path: Path) -> Optional[Dict[str, Any]]:
+    """
+    Загружает данные ground truth из JSON файла
+    
+    Args:
+        ground_truth_path: Путь к файлу с ground truth данными
+        
+    Returns:
+        Optional[Dict[str, Any]]: Данные ground truth или None, если файл не найден
+    """
+    if not ground_truth_path.exists():
+        return None
+        
+    with open(ground_truth_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
 def resize_image(image: np.ndarray, target_width: int) -> np.ndarray:
     """
     Приведение изображения к единому разрешению с сохранением пропорций
